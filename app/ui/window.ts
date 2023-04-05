@@ -1,52 +1,63 @@
-import {app, BrowserWindow, shell, Menu, BrowserWindowConstructorOptions} from 'electron';
-import {isAbsolute, normalize, sep} from 'path';
-import {URL, fileURLToPath} from 'url';
-import {v4 as uuidv4} from 'uuid';
-import isDev from 'electron-is-dev';
-import updater from '../updater';
-import toElectronBackgroundColor from '../utils/to-electron-background-color';
-import {icon, homeDirectory} from '../config/paths';
-import createRPC from '../rpc';
-import notify from '../notify';
-import fetchNotifications from '../notifications';
-import Session from '../session';
-import contextMenuTemplate from './contextmenu';
-import {execCommand} from '../commands';
-import {setRendererType, unsetRendererType} from '../utils/renderer-utils';
-import {decorateSessionOptions, decorateSessionClass} from '../plugins';
-import {enable as remoteEnable} from '@electron/remote/main';
-import {configOptions} from '../../lib/config';
-import {getWorkingDirectoryFromPID} from 'native-process-working-directory';
-import {existsSync} from 'fs';
+import {
+  app,
+  BrowserWindow,
+  shell,
+  Menu,
+  BrowserWindowConstructorOptions,
+} from "electron";
+import { isAbsolute, normalize, sep } from "path";
+import { URL, fileURLToPath } from "url";
+import { v4 as uuidv4 } from "uuid";
+import isDev from "electron-is-dev";
+import updater from "../updater";
+import toElectronBackgroundColor from "../utils/to-electron-background-color";
+import { icon, homeDirectory } from "../config/paths";
+import createRPC from "../rpc";
+import notify from "../notify";
+import fetchNotifications from "../notifications";
+import Session from "../session";
+import contextMenuTemplate from "./contextmenu";
+import { execCommand } from "../commands";
+import { setRendererType, unsetRendererType } from "../utils/renderer-utils";
+import { decorateSessionOptions, decorateSessionClass } from "../plugins";
+import { enable as remoteEnable } from "@electron/remote/main";
+import { configOptions } from "../../lib/config";
+import { getWorkingDirectoryFromPID } from "native-process-working-directory";
+import { existsSync } from "fs";
 
 export function newWindow(
   options_: BrowserWindowConstructorOptions,
   cfg: configOptions,
   fn?: (win: BrowserWindow) => void
 ): BrowserWindow {
-  const classOpts = Object.assign({uid: uuidv4()});
+  const classOpts = Object.assign({ uid: uuidv4() });
   app.plugins.decorateWindowClass(classOpts);
 
   const winOpts: BrowserWindowConstructorOptions = {
     minWidth: 370,
     minHeight: 190,
-    backgroundColor: toElectronBackgroundColor(cfg.backgroundColor || '#000'),
-    titleBarStyle: 'hiddenInset',
-    title: 'Hyper.app',
+    backgroundColor: toElectronBackgroundColor(cfg.backgroundColor || "#000"),
+    titleBarStyle: "hiddenInset",
+    title: "Hyper.app",
     // we want to go frameless on Windows and Linux
-    frame: process.platform === 'darwin',
-    transparent: process.platform === 'darwin',
+    frame: process.platform === "darwin",
+    transparent: process.platform === "darwin",
     icon,
-    show: Boolean(process.env.HYPER_DEBUG || process.env.HYPERTERM_DEBUG || isDev),
+    show: Boolean(
+      process.env.HYPER_DEBUG || process.env.HYPERTERM_DEBUG || isDev
+    ),
     acceptFirstMouse: true,
     webPreferences: {
       nodeIntegration: true,
       navigateOnDragDrop: true,
-      contextIsolation: false
+      contextIsolation: false,
+      webviewTag: true,
     },
-    ...options_
+    ...options_,
   };
-  const window = new BrowserWindow(app.plugins.getDecoratedBrowserOptions(winOpts));
+  const window = new BrowserWindow(
+    app.plugins.getDecoratedBrowserOptions(winOpts)
+  );
 
   // Enable remote module on this window
   remoteEnable(window.webContents);
@@ -61,12 +72,14 @@ export function newWindow(
 
   const updateBackgroundColor = () => {
     const cfg_ = app.plugins.getDecoratedConfig();
-    window.setBackgroundColor(toElectronBackgroundColor(cfg_.backgroundColor || '#000'));
+    window.setBackgroundColor(
+      toElectronBackgroundColor(cfg_.backgroundColor || "#000")
+    );
   };
 
   // set working directory
   let argPath = process.argv[1];
-  if (argPath && process.platform === 'win32') {
+  if (argPath && process.platform === "win32") {
     if (/[a-zA-Z]:"/.test(argPath)) {
       argPath = argPath.replace('"', sep);
     }
@@ -84,11 +97,17 @@ export function newWindow(
     const cfg_ = app.plugins.getDecoratedConfig();
 
     // notify renderer
-    window.webContents.send('config change');
+    window.webContents.send("config change");
 
     // notify user that shell changes require new sessions
-    if (cfg_.shell !== cfg.shell || JSON.stringify(cfg_.shellArgs) !== JSON.stringify(cfg.shellArgs)) {
-      notify('Shell configuration changed!', 'Open a new tab or window to start using the new shell');
+    if (
+      cfg_.shell !== cfg.shell ||
+      JSON.stringify(cfg_.shellArgs) !== JSON.stringify(cfg.shellArgs)
+    ) {
+      notify(
+        "Shell configuration changed!",
+        "Open a new tab or window to start using the new shell"
+      );
     }
 
     // update background color if necessary
@@ -97,7 +116,7 @@ export function newWindow(
     cfg = cfg_;
   });
 
-  rpc.on('init', () => {
+  rpc.on("init", () => {
     window.show();
     updateBackgroundColor();
 
@@ -105,7 +124,7 @@ export function newWindow(
     // a new session will be created by default.
     if (!fn) {
       fn = (win: BrowserWindow) => {
-        win.rpc.emit('termgroup add req', {});
+        win.rpc.emit("termgroup add req", {});
       };
     }
 
@@ -120,7 +139,7 @@ export function newWindow(
     if (!isDev) {
       updater(window);
     } else {
-      console.log('ignoring auto updates during dev');
+      console.log("ignoring auto updates during dev");
     }
   });
 
@@ -128,18 +147,21 @@ export function newWindow(
     const uid = uuidv4();
     const extraOptionsFiltered: any = {};
     Object.keys(extraOptions).forEach((key) => {
-      if (extraOptions[key] !== undefined) extraOptionsFiltered[key] = extraOptions[key];
+      if (extraOptions[key] !== undefined)
+        extraOptionsFiltered[key] = extraOptions[key];
     });
 
-    let cwd = '';
+    let cwd = "";
     if (cfg.preserveCWD === undefined || cfg.preserveCWD) {
-      const activePID = extraOptionsFiltered.activeUid && sessions.get(extraOptionsFiltered.activeUid)?.pty?.pid;
+      const activePID =
+        extraOptionsFiltered.activeUid &&
+        sessions.get(extraOptionsFiltered.activeUid)?.pty?.pid;
       try {
         cwd = activePID && getWorkingDirectoryFromPID(activePID);
       } catch (error) {
         console.error(error);
       }
-      cwd = cwd && isAbsolute(cwd) && existsSync(cwd) ? cwd : '';
+      cwd = cwd && isAbsolute(cwd) && existsSync(cwd) ? cwd : "";
     }
 
     // remove the rows and cols, the wrong value of them will break layout when init create
@@ -148,117 +170,130 @@ export function newWindow(
         cwd: cwd || workingDirectory,
         splitDirection: undefined,
         shell: cfg.shell,
-        shellArgs: cfg.shellArgs && Array.from(cfg.shellArgs)
+        shellArgs: cfg.shellArgs && Array.from(cfg.shellArgs),
       },
       extraOptionsFiltered,
-      {uid}
+      { uid }
     );
     const options = decorateSessionOptions(defaultOptions);
     const DecoratedSession = decorateSessionClass(Session);
     const session = new DecoratedSession(options);
     sessions.set(uid, session);
-    return {session, options};
+    return { session, options };
   }
 
-  rpc.on('new', (extraOptions) => {
-    const {session, options} = createSession(extraOptions);
+  rpc.on("new", (extraOptions) => {
+    const { session, options } = createSession(extraOptions);
 
     sessions.set(options.uid, session);
-    rpc.emit('session add', {
+    rpc.emit("session add", {
       rows: options.rows,
       cols: options.cols,
       uid: options.uid,
       splitDirection: options.splitDirection,
       shell: session.shell,
       pid: session.pty ? session.pty.pid : null,
-      activeUid: options.activeUid
+      activeUid: options.activeUid,
     });
 
-    session.on('data', (data: string) => {
-      rpc.emit('session data', data);
+    session.on("data", (data: string) => {
+      rpc.emit("session data", data);
     });
 
-    session.on('exit', () => {
-      rpc.emit('session exit', {uid: options.uid});
+    session.on("exit", () => {
+      rpc.emit("session exit", { uid: options.uid });
       unsetRendererType(options.uid);
       sessions.delete(options.uid);
     });
   });
 
-  rpc.on('exit', ({uid}) => {
+  rpc.on("exit", ({ uid }) => {
     const session = sessions.get(uid);
     if (session) {
       session.exit();
     }
   });
-  rpc.on('unmaximize', () => {
+  rpc.on("unmaximize", () => {
     window.unmaximize();
   });
-  rpc.on('maximize', () => {
+  rpc.on("maximize", () => {
     window.maximize();
   });
-  rpc.on('minimize', () => {
+  rpc.on("minimize", () => {
     window.minimize();
   });
-  rpc.on('resize', ({uid, cols, rows}) => {
+  rpc.on("resize", ({ uid, cols, rows }) => {
     const session = sessions.get(uid);
     if (session) {
-      session.resize({cols, rows});
+      session.resize({ cols, rows });
     }
   });
-  rpc.on('data', ({uid, data, escaped}: {uid: string; data: string; escaped: boolean}) => {
-    const session = sessions.get(uid);
-    if (session) {
-      if (escaped) {
-        const escapedData = session.shell?.endsWith('cmd.exe')
-          ? `"${data}"` // This is how cmd.exe does it
-          : `'${data.replace(/'/g, `'\\''`)}'`; // Inside a single-quoted string nothing is interpreted
+  rpc.on(
+    "data",
+    ({
+      uid,
+      data,
+      escaped,
+    }: {
+      uid: string;
+      data: string;
+      escaped: boolean;
+    }) => {
+      const session = sessions.get(uid);
+      if (session) {
+        if (escaped) {
+          const escapedData = session.shell?.endsWith("cmd.exe")
+            ? `"${data}"` // This is how cmd.exe does it
+            : `'${data.replace(/'/g, `'\\''`)}'`; // Inside a single-quoted string nothing is interpreted
 
-        session.write(escapedData);
-      } else {
-        session.write(data);
+          session.write(escapedData);
+        } else {
+          session.write(data);
+        }
       }
     }
-  });
-  rpc.on('info renderer', ({uid, type}) => {
+  );
+  rpc.on("info renderer", ({ uid, type }) => {
     // Used in the "About" dialog
     setRendererType(uid, type);
   });
-  rpc.on('open external', ({url}) => {
+  rpc.on("open external", ({ url }) => {
     void shell.openExternal(url);
   });
-  rpc.on('open context menu', (selection) => {
-    const {createWindow} = app;
-    Menu.buildFromTemplate(contextMenuTemplate(createWindow, selection)).popup({window});
+  rpc.on("open context menu", (selection) => {
+    const { createWindow } = app;
+    Menu.buildFromTemplate(contextMenuTemplate(createWindow, selection)).popup({
+      window,
+    });
   });
-  rpc.on('open hamburger menu', ({x, y}) => {
-    Menu.getApplicationMenu()!.popup({x: Math.ceil(x), y: Math.ceil(y)});
+  rpc.on("open hamburger menu", ({ x, y }) => {
+    Menu.getApplicationMenu()!.popup({ x: Math.ceil(x), y: Math.ceil(y) });
   });
   // Same deal as above, grabbing the window titlebar when the window
   // is maximized on Windows results in unmaximize, without hitting any
   // app buttons
-  for (const ev of ['maximize', 'unmaximize', 'minimize', 'restore'] as any) {
+  for (const ev of ["maximize", "unmaximize", "minimize", "restore"] as any) {
     window.on(ev, () => {
-      rpc.emit('windowGeometry change', {isMaximized: window.isMaximized()});
+      rpc.emit("windowGeometry change", { isMaximized: window.isMaximized() });
     });
   }
-  window.on('move', () => {
+  window.on("move", () => {
     const position = window.getPosition();
-    rpc.emit('move', {bounds: {x: position[0], y: position[1]}});
+    rpc.emit("move", { bounds: { x: position[0], y: position[1] } });
   });
-  rpc.on('close', () => {
+  rpc.on("close", () => {
     window.close();
   });
-  rpc.on('command', (command) => {
+  rpc.on("command", (command) => {
     const focusedWindow = BrowserWindow.getFocusedWindow();
     execCommand(command, focusedWindow!);
   });
   // pass on the full screen events from the window to react
-  rpc.win.on('enter-full-screen', () => {
-    rpc.emit('enter full screen', {});
+  rpc.win.on("enter-full-screen", () => {
+    rpc.emit("enter full screen", {});
   });
-  rpc.win.on('leave-full-screen', () => {
-    rpc.emit('leave full screen', {});
+  rpc.win.on("leave-full-screen", () => {
+    rpc.emit("leave full screen", {});
   });
   const deleteSessions = () => {
     sessions.forEach((session, key) => {
@@ -270,38 +305,38 @@ export function newWindow(
   // we reset the rpc channel only upon
   // subsequent refreshes (ie: F5)
   let i = 0;
-  window.webContents.on('did-navigate', () => {
+  window.webContents.on("did-navigate", () => {
     if (i++) {
       deleteSessions();
     }
   });
 
   const handleDroppedURL = (url: string) => {
-    const protocol = typeof url === 'string' && new URL(url).protocol;
-    if (protocol === 'file:') {
+    const protocol = typeof url === "string" && new URL(url).protocol;
+    if (protocol === "file:") {
       const path = fileURLToPath(url);
-      return {data: path, escaped: true};
-    } else if (protocol === 'http:' || protocol === 'https:') {
-      return {data: url};
+      return { data: path, escaped: true };
+    } else if (protocol === "http:" || protocol === "https:") {
+      return { data: url };
     }
   };
 
   // If file is dropped onto the terminal window, navigate and new-window events are prevented
   // and it's path is added to active session.
-  window.webContents.on('will-navigate', (event, url) => {
+  window.webContents.on("will-navigate", (event, url) => {
     const data = handleDroppedURL(url);
     if (data) {
       event.preventDefault();
-      rpc.emit('session data send', data);
+      rpc.emit("session data send", data);
     }
   });
-  window.webContents.setWindowOpenHandler(({url}) => {
+  window.webContents.setWindowOpenHandler(({ url }) => {
     const data = handleDroppedURL(url);
     if (data) {
-      rpc.emit('session data send', data);
-      return {action: 'deny'};
+      rpc.emit("session data send", data);
+      return { action: "deny" };
     }
-    return {action: 'allow'};
+    return { action: "allow" };
   });
 
   // expose internals to extension authors
@@ -318,7 +353,7 @@ export function newWindow(
   const pluginsUnsubscribe = app.plugins.subscribe((err: any) => {
     if (!err) {
       load();
-      window.webContents.send('plugins change');
+      window.webContents.send("plugins change");
       updateBackgroundColor();
     }
   });
@@ -330,7 +365,7 @@ export function newWindow(
     window.focusTime = process.uptime();
   };
 
-  window.on('focus', () => {
+  window.on("focus", () => {
     updateFocusTime();
   });
 
