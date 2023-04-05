@@ -215,7 +215,12 @@ export default class Term extends React.PureComponent<
       this.term.loadAddon(
         new WebLinksAddon(
           (event: MouseEvent | undefined, uri: string) => {
-            if (shallActivateWebLink(event)) void shell.openExternal(uri);
+            // if (shallActivateWebLink(event)) void shell.openExternal(uri);
+            store.dispatch({
+              type: "SESSION_URL_SET",
+              uid: props.uid,
+              url: uri,
+            });
           },
           {
             // prevent default electron link handling to allow selection, e.g. via double-click
