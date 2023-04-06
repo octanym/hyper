@@ -1,18 +1,18 @@
-export const SESSION_ADD = 'SESSION_ADD';
-export const SESSION_RESIZE = 'SESSION_RESIZE';
-export const SESSION_REQUEST = 'SESSION_REQUEST';
-export const SESSION_ADD_DATA = 'SESSION_ADD_DATA';
-export const SESSION_PTY_DATA = 'SESSION_PTY_DATA';
-export const SESSION_PTY_EXIT = 'SESSION_PTY_EXIT';
-export const SESSION_USER_EXIT = 'SESSION_USER_EXIT';
-export const SESSION_SET_ACTIVE = 'SESSION_SET_ACTIVE';
-export const SESSION_CLEAR_ACTIVE = 'SESSION_CLEAR_ACTIVE';
-export const SESSION_USER_DATA = 'SESSION_USER_DATA';
-export const SESSION_URL_SET = 'SESSION_URL_SET';
-export const SESSION_URL_UNSET = 'SESSION_URL_UNSET';
-export const SESSION_SET_XTERM_TITLE = 'SESSION_SET_XTERM_TITLE';
-export const SESSION_SET_CWD = 'SESSION_SET_CWD';
-export const SESSION_SEARCH = 'SESSION_SEARCH';
+export const SESSION_ADD = "SESSION_ADD";
+export const SESSION_RESIZE = "SESSION_RESIZE";
+export const SESSION_REQUEST = "SESSION_REQUEST";
+export const SESSION_ADD_DATA = "SESSION_ADD_DATA";
+export const SESSION_PTY_DATA = "SESSION_PTY_DATA";
+export const SESSION_PTY_EXIT = "SESSION_PTY_EXIT";
+export const SESSION_USER_EXIT = "SESSION_USER_EXIT";
+export const SESSION_SET_ACTIVE = "SESSION_SET_ACTIVE";
+export const SESSION_CLEAR_ACTIVE = "SESSION_CLEAR_ACTIVE";
+export const SESSION_USER_DATA = "SESSION_USER_DATA";
+export const SESSION_URL_SET = "SESSION_URL_SET";
+export const SESSION_URL_UNSET = "SESSION_URL_UNSET";
+export const SESSION_SET_XTERM_TITLE = "SESSION_SET_XTERM_TITLE";
+export const SESSION_SET_CWD = "SESSION_SET_CWD";
+export const SESSION_SEARCH = "SESSION_SEARCH";
 
 export interface SessionAddAction {
   type: typeof SESSION_ADD;
@@ -21,7 +21,7 @@ export interface SessionAddAction {
   pid: number | null;
   cols: number | null;
   rows: number | null;
-  splitDirection?: 'HORIZONTAL' | 'VERTICAL';
+  splitDirection?: "HORIZONTAL" | "VERTICAL";
   activeUid: string | null;
   now: number;
 }
@@ -65,6 +65,7 @@ export interface SessionUserDataAction {
 export interface SessionUrlSetAction {
   type: typeof SESSION_URL_SET;
   uid: string;
+  url: string | null;
 }
 export interface SessionUrlUnsetAction {
   type: typeof SESSION_URL_UNSET;

@@ -1,6 +1,6 @@
-import rpc from '../rpc';
-import {keys} from '../utils/object';
-import findBySession from '../utils/term-groups';
+import rpc from "../rpc";
+import { keys } from "../utils/object";
+import findBySession from "../utils/term-groups";
 import {
   SESSION_ADD,
   SESSION_RESIZE,
@@ -13,13 +13,22 @@ import {
   SESSION_CLEAR_ACTIVE,
   SESSION_USER_DATA,
   SESSION_SET_XTERM_TITLE,
-  SESSION_SEARCH
-} from '../constants/sessions';
-import {HyperState, session, HyperDispatch, HyperActions} from '../hyper';
+  SESSION_SEARCH,
+  SESSION_URL_SET,
+} from "../constants/sessions";
+import { HyperState, session, HyperDispatch, HyperActions } from "../hyper";
 
-export function addSession({uid, shell, pid, cols, rows, splitDirection, activeUid}: session) {
+export function addSession({
+  uid,
+  shell,
+  pid,
+  cols,
+  rows,
+  splitDirection,
+  activeUid,
+}: session) {
   return (dispatch: HyperDispatch, getState: () => HyperState) => {
-    const {sessions} = getState();
+    const { sessions } = getState();
     const now = Date.now();
     dispatch({
       type: SESSION_ADD,
@@ -30,7 +39,7 @@ export function addSession({uid, shell, pid, cols, rows, splitDirection, activeU
       rows,
       splitDirection,
       activeUid: activeUid ? activeUid : sessions.activeUid,
-      now
+      now,
     });
   };
 }
@@ -40,11 +49,11 @@ export function requestSession() {
     dispatch({
       type: SESSION_REQUEST,
       effect: () => {
-        const {ui} = getState();
+        const { ui } = getState();
         // the cols and rows from preview session maybe not accurate. so remove.
-        const {/*cols, rows,*/ cwd} = ui;
-        rpc.emit('new', {cwd});
-      }
+        const { /*cols, rows,*/ cwd } = ui;
+        rpc.emit("new", { cwd });
+      },
     });
   };
 }
@@ -60,30 +69,33 @@ export function addSessionData(uid: string, data: string) {
           type: SESSION_PTY_DATA,
           uid,
           data,
-          now
+          now,
         });
-      }
+      },
     });
   };
 }
 
-function createExitAction(type: typeof SESSION_USER_EXIT | typeof SESSION_PTY_EXIT) {
-  return (uid: string) => (dispatch: HyperDispatch, getState: () => HyperState) => {
-    return dispatch({
-      type,
-      uid,
-      effect() {
-        if (type === SESSION_USER_EXIT) {
-          rpc.emit('exit', {uid});
-        }
+function createExitAction(
+  type: typeof SESSION_USER_EXIT | typeof SESSION_PTY_EXIT
+) {
+  return (uid: string) =>
+    (dispatch: HyperDispatch, getState: () => HyperState) => {
+      return dispatch({
+        type,
+        uid,
+        effect() {
+          if (type === SESSION_USER_EXIT) {
+            rpc.emit("exit", { uid });
+          }
 
-        const sessions = keys(getState().sessions.sessions);
-        if (sessions.length === 0) {
-          window.close();
-        }
-      }
-    } as HyperActions);
-  };
+          const sessions = keys(getState().sessions.sessions);
+          if (sessions.length === 0) {
+            window.close();
+          }
+        },
+      } as HyperActions);
+    };
 }
 
 // we want to distinguish an exit
@@ -95,14 +107,14 @@ export function setActiveSession(uid: string) {
   return (dispatch: HyperDispatch) => {
     dispatch({
       type: SESSION_SET_ACTIVE,
-      uid
+      uid,
     });
   };
 }
 
 export function clearActiveSession(): HyperActions {
   return {
-    type: SESSION_CLEAR_ACTIVE
+    type: SESSION_CLEAR_ACTIVE,
   };
 }
 
@@ -110,13 +122,13 @@ export function setSessionXtermTitle(uid: string, title: string): HyperActions {
   return {
     type: SESSION_SET_XTERM_TITLE,
     uid,
-    title
+    title,
   };
 }
 
 export function resizeSession(uid: string, cols: number, rows: number) {
   return (dispatch: HyperDispatch, getState: () => HyperState) => {
-    const {termGroups} = getState();
+    const { termGroups } = getState();
     const group = findBySession(termGroups, uid)!;
     const isStandaloneTerm = !group.parentUid && !group.children.length;
     const now = Date.now();
@@ -128,8 +140,8 @@ export function resizeSession(uid: string, cols: number, rows: number) {
       isStandaloneTerm,
       now,
       effect() {
-        rpc.emit('resize', {uid, cols, rows});
-      }
+        rpc.emit("resize", { uid, cols, rows });
+      },
     });
   };
 }
@@ -140,7 +152,7 @@ export function openSearch(uid?: string) {
     dispatch({
       type: SESSION_SEARCH,
       uid: targetUid,
-      value: true
+      value: true,
     });
   };
 }
@@ -152,7 +164,7 @@ export function closeSearch(uid?: string, keyEvent?: any) {
       dispatch({
         type: SESSION_SEARCH,
         uid: targetUid,
-        value: false
+        value: false,
       });
     } else {
       if (keyEvent) {
@@ -162,7 +174,11 @@ export function closeSearch(uid?: string, keyEvent?: any) {
   };
 }
 
-export function sendSessionData(uid: string | null, data: any, escaped?: boolean | null) {
+export function sendSessionData(
+  uid: string | null,
+  data: any,
+  escaped?: boolean | null
+) {
   return (dispatch: HyperDispatch, getState: () => HyperState) => {
     dispatch({
       type: SESSION_USER_DATA,
@@ -171,8 +187,19 @@ export function sendSessionData(uid: string | null, data: any, escaped?: boolean
         // If no uid is passed, data is sent to the active session.
         const targetUid = uid || getState().sessions.activeUid;
 
-        rpc.emit('data', {uid: targetUid, data, escaped});
-      }
+        rpc.emit("data", { uid: targetUid, data, escaped });
+      },
+    });
+  };
+}
+
+export function setSessionUrl(uid: string | null, url: string | null) {
+  return (dispatch: HyperDispatch, getState: () => HyperState) => {
+    const targetId = uid || getState().sessions.activeUid!;
+    dispatch({
+      type: SESSION_URL_SET,
+      uid: targetId,
+      url: url,
     });
   };
 }
