@@ -9,12 +9,16 @@ import { Unicode11Addon } from "xterm-addon-unicode11";
 import { clipboard, shell } from "electron";
 import Color from "color";
 import terms from "../terms";
+import { setSessionUrl } from "../actions/sessions";
+import configureStore from "../store/configure-store";
 import processClipboard from "../utils/paste";
 import _SearchBox from "./searchBox";
 import { TermProps } from "../hyper";
 import { ObjectTypedKeys } from "../utils/object";
 import { decorate } from "../utils/plugins";
 import "xterm/css/xterm.css";
+
+const store_ = configureStore();
 
 const SearchBox = decorate(_SearchBox, "SearchBox");
 
@@ -216,11 +220,8 @@ export default class Term extends React.PureComponent<
         new WebLinksAddon(
           (event: MouseEvent | undefined, uri: string) => {
             // if (shallActivateWebLink(event)) void shell.openExternal(uri);
-            store.dispatch({
-              type: "SESSION_URL_SET",
-              uid: props.uid,
-              url: uri,
-            });
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+            store_.dispatch(setSessionUrl(props.uid, uri));
           },
           {
             // prevent default electron link handling to allow selection, e.g. via double-click
