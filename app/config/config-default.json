@@ -43,10 +43,8 @@
       "limeGreen": "#32CD32",
       "lightCoral": "#F08080"
     },
-    "shell": "",
-    "shellArgs": [
-      "--login"
-    ],
+    "shell": "C:\\Windows\\System32\\wsl.exe",
+    "shellArgs": ["~"],
     "env": {},
     "bell": "SOUND",
     "bellSound": null,
