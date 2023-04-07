@@ -6,8 +6,7 @@ import { SearchAddon /*, ISearchDecorationOptions*/ } from "xterm-addon-search";
 import { WebglAddon } from "xterm-addon-webgl";
 import { LigaturesAddon } from "xterm-addon-ligatures";
 import { Unicode11Addon } from "xterm-addon-unicode11";
-import { clipboard } from "electron";
-import * as remote from "@electron/remote";
+import { clipboard, webContents } from "electron";
 import Color from "color";
 import terms from "../terms";
 import { setSessionUrl } from "../actions/sessions";
@@ -188,7 +187,7 @@ export default class Term extends React.PureComponent<TermProps> {
         new WebLinksAddon(
           (event: MouseEvent | undefined, uri: string) => {
             // if (shallActivateWebLink(event)) void shell.openExternal(uri);
-            store_.dispatch(setSessionUrl(props.uid, uri));
+            (window as any).store.dispatch(setSessionUrl(props.uid, uri));
           },
           {
             // prevent default electron link handling to allow selection, e.g. via double-click
@@ -501,7 +500,7 @@ export default class Term extends React.PureComponent<TermProps> {
 
     if (!oldRef && webView) {
       setTimeout(() => {
-        const wc = remote.webContents.fromId(webView.getWebContentsId());
+        const wc = webContents.fromId(webView.getWebContentsId());
         wc.setIgnoreMenuShortcuts(true);
         wc.on("before-input-event", (_event, input) => {
           if (input.type === "keyDown") {
@@ -527,6 +526,8 @@ export default class Term extends React.PureComponent<TermProps> {
       >
         {this.props.url ? (
           <webview
+            nodeintegration
+            nodeintegrationinsubframes
             ref={this.setWebViewRef}
             src={this.props.url}
             style={{
