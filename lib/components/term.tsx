@@ -2,25 +2,24 @@ import React from "react";
 import { Terminal, ITerminalOptions, IDisposable } from "xterm";
 import { FitAddon } from "xterm-addon-fit";
 import { WebLinksAddon } from "xterm-addon-web-links";
-import { SearchAddon, ISearchDecorationOptions } from "xterm-addon-search";
+import { SearchAddon /*, ISearchDecorationOptions*/ } from "xterm-addon-search";
 import { WebglAddon } from "xterm-addon-webgl";
 import { LigaturesAddon } from "xterm-addon-ligatures";
 import { Unicode11Addon } from "xterm-addon-unicode11";
-import { clipboard, shell } from "electron";
+import { clipboard } from "electron";
+import * as remote from "@electron/remote";
 import Color from "color";
 import terms from "../terms";
 import { setSessionUrl } from "../actions/sessions";
 import configureStore from "../store/configure-store";
 import processClipboard from "../utils/paste";
-import _SearchBox from "./searchBox";
+import SearchBox from "./searchBox";
 import { TermProps } from "../hyper";
 import { ObjectTypedKeys } from "../utils/object";
-import { decorate } from "../utils/plugins";
+// import { decorate } from "../utils/plugins";
 import "xterm/css/xterm.css";
 
 const store_ = configureStore();
-
-const SearchBox = decorate(_SearchBox, "SearchBox");
 
 const isWindows = ["Windows", "Win16", "Win32", "WinCE"].includes(
   navigator.platform
@@ -94,26 +93,11 @@ const getTermOptions = (props: TermProps): ITerminalOptions => {
       brightWhite: props.colors.lightWhite,
     },
     screenReaderMode: props.screenReaderMode,
-    overviewRulerWidth: 20,
+    // overviewRulerWidth: 20,
   };
 };
 
-export default class Term extends React.PureComponent<
-  TermProps,
-  {
-    searchOptions: {
-      caseSensitive: boolean;
-      wholeWord: boolean;
-      regex: boolean;
-    };
-    searchResults:
-      | {
-          resultIndex: number;
-          resultCount: number;
-        }
-      | undefined;
-  }
-> {
+export default class Term extends React.PureComponent<TermProps> {
   termRef: HTMLElement | null;
   termWrapperRef: HTMLElement | null;
   termOptions: ITerminalOptions;
@@ -125,16 +109,7 @@ export default class Term extends React.PureComponent<
   term!: Terminal;
   resizeObserver!: ResizeObserver;
   resizeTimeout!: NodeJS.Timeout;
-  searchDecorations: ISearchDecorationOptions;
-  state = {
-    searchOptions: {
-      caseSensitive: false,
-      wholeWord: false,
-      regex: false,
-    },
-    searchResults: undefined,
-  };
-
+  webViewRef: any | null;
   constructor(props: TermProps) {
     super(props);
     props.ref_(props.uid, this);
@@ -145,13 +120,6 @@ export default class Term extends React.PureComponent<
     this.termDefaultBellSound = null;
     this.fitAddon = new FitAddon();
     this.searchAddon = new SearchAddon();
-    this.searchDecorations = {
-      activeMatchColorOverviewRuler: Color(this.props.cursorColor).hex(),
-      matchOverviewRuler: Color(this.props.borderColor).hex(),
-      activeMatchBackground: Color(this.props.cursorColor).hex(),
-      activeMatchBorder: Color(this.props.cursorColor).hex(),
-      matchBorder: Color(this.props.cursorColor).hex(),
-    };
   }
 
   // The main process shows this in the About dialog
@@ -220,7 +188,6 @@ export default class Term extends React.PureComponent<
         new WebLinksAddon(
           (event: MouseEvent | undefined, uri: string) => {
             // if (shallActivateWebLink(event)) void shell.openExternal(uri);
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-call
             store_.dispatch(setSessionUrl(props.uid, uri));
           },
           {
@@ -248,11 +215,11 @@ export default class Term extends React.PureComponent<
       this.searchAddon = props.searchAddon!;
     }
 
-    try {
-      this.term.element!.style.padding = props.padding;
-    } catch (error) {
-      console.log(error);
-    }
+    // try {
+    //   this.term.element!.style.padding = props.padding;
+    // } catch (error) {
+    //   console.log(error);
+    // }
 
     this.fitAddon.fit();
 
@@ -311,14 +278,14 @@ export default class Term extends React.PureComponent<
       );
     }
 
-    this.disposableListeners.push(
-      this.searchAddon.onDidChangeResults((results) => {
-        this.setState((state) => ({
-          ...state,
-          searchResults: results,
-        }));
-      })
-    );
+    // this.disposableListeners.push(
+    //   this.searchAddon.onDidChangeResults((results) => {
+    //     this.setState((state) => ({
+    //       ...state,
+    //       searchResults: results,
+    //     }));
+    //   })
+    // );
 
     window.addEventListener("paste", this.onWindowPaste, {
       capture: true,
@@ -380,28 +347,20 @@ export default class Term extends React.PureComponent<
     this.term.reset();
   }
 
+  search = (searchTerm = "") => {
+    this.searchAddon.findNext(searchTerm);
+  };
+
   searchNext = (searchTerm: string) => {
-    this.searchAddon.findNext(searchTerm, {
-      ...this.state.searchOptions,
-      decorations: this.searchDecorations,
-    });
+    this.searchAddon.findNext(searchTerm);
   };
 
   searchPrevious = (searchTerm: string) => {
-    this.searchAddon.findPrevious(searchTerm, {
-      ...this.state.searchOptions,
-      decorations: this.searchDecorations,
-    });
+    this.searchAddon.findPrevious(searchTerm);
   };
 
   closeSearchBox = () => {
     this.props.onCloseSearch();
-    this.searchAddon.clearDecorations();
-    this.searchAddon.clearActiveDecoration();
-    this.setState((state) => ({
-      ...state,
-      searchResults: undefined,
-    }));
     this.term.focus();
   };
 
@@ -438,7 +397,7 @@ export default class Term extends React.PureComponent<
       this.props.bellSound || this.termDefaultBellSound!;
 
     if (prevProps.search && !this.props.search) {
-      this.closeSearchBox();
+      this.search();
     }
 
     // Update only options that have changed.
@@ -479,11 +438,11 @@ export default class Term extends React.PureComponent<
 
     this.termOptions = nextTermOptions;
 
-    try {
-      this.term.element!.style.padding = this.props.padding;
-    } catch (error) {
-      console.log(error);
-    }
+    // try {
+    //   this.term.element!.style.padding = this.props.padding;
+    // } catch (error) {
+    //   console.log(error);
+    // }
 
     if (
       this.props.fontSize !== prevProps.fontSize ||
@@ -536,14 +495,39 @@ export default class Term extends React.PureComponent<
     });
   }
 
+  setWebViewRef = (webView: any) => {
+    const oldRef = this.webViewRef;
+    this.webViewRef = webView;
+
+    if (!oldRef && webView) {
+      setTimeout(() => {
+        const wc = remote.webContents.fromId(webView.getWebContentsId());
+        wc.setIgnoreMenuShortcuts(true);
+        wc.on("before-input-event", (_event, input) => {
+          if (input.type === "keyDown") {
+            if (input.key === "r" && input.meta) {
+              webView.reload();
+            } else if (input.key === "=" && input.meta) {
+              wc.setZoomLevel(wc.getZoomLevel() + 1);
+            } else if (input.key === "-" && input.meta) {
+              wc.setZoomLevel(wc.getZoomLevel() - 1);
+            }
+          }
+        });
+      }, 10);
+    }
+  };
+
   render() {
     return (
       <div
         className={`term_fit ${this.props.isTermActive ? "term_active" : ""}`}
+        style={{ padding: this.props.padding }}
         onMouseUp={this.onMouseUp}
       >
         {this.props.url ? (
           <webview
+            ref={this.setWebViewRef}
             src={this.props.url}
             style={{
               background: "#fff",
@@ -565,45 +549,10 @@ export default class Term extends React.PureComponent<
             {this.props.customChildren}
             {this.props.search ? (
               <SearchBox
+                search={this.search}
                 next={this.searchNext}
                 prev={this.searchPrevious}
                 close={this.closeSearchBox}
-                caseSensitive={this.state.searchOptions.caseSensitive}
-                wholeWord={this.state.searchOptions.wholeWord}
-                regex={this.state.searchOptions.regex}
-                results={this.state.searchResults}
-                toggleCaseSensitive={() =>
-                  this.setState({
-                    ...this.state,
-                    searchOptions: {
-                      ...this.state.searchOptions,
-                      caseSensitive: !this.state.searchOptions.caseSensitive,
-                    },
-                  })
-                }
-                toggleWholeWord={() =>
-                  this.setState({
-                    ...this.state,
-                    searchOptions: {
-                      ...this.state.searchOptions,
-                      wholeWord: !this.state.searchOptions.wholeWord,
-                    },
-                  })
-                }
-                toggleRegex={() =>
-                  this.setState({
-                    ...this.state,
-                    searchOptions: {
-                      ...this.state.searchOptions,
-                      regex: !this.state.searchOptions.regex,
-                    },
-                  })
-                }
-                selectionColor={this.props.selectionColor}
-                backgroundColor={this.props.backgroundColor}
-                foregroundColor={this.props.foregroundColor}
-                borderColor={this.props.borderColor}
-                font={this.props.uiFontFamily}
               />
             ) : (
               ""
