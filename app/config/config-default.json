@@ -3,7 +3,7 @@
   "config": {
     "updateChannel": "stable",
     "fontSize": 12,
-    "fontFamily": "Menlo, \"DejaVu Sans Mono\", Consolas, \"Lucida Console\", monospace",
+    "fontFamily": "Hack NFM",
     "fontWeight": "normal",
     "fontWeightBold": "bold",
     "lineHeight": 1,
@@ -58,12 +58,12 @@
     "autoUpdatePlugins": true,
     "preserveCWD": true,
     "screenReaderMode": false,
+    "vibrancy": "blur",
     "verminal": {
-      "fontFamily": "Hack NFM",
       "fontSize": 16
     }
   },
-  "plugins": ["verminal"],
-  "localPlugins": [],
+  "plugins": [],
+  "localPlugins": ["verminal"],
   "keymaps": {}
 }

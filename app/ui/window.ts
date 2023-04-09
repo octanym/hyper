@@ -41,7 +41,7 @@ export function newWindow(
     title: "Hyper.app",
     // we want to go frameless on Windows and Linux
     frame: process.platform === "darwin",
-    transparent: process.platform === "darwin",
+    transparent: true,
     icon,
     show: Boolean(
       process.env.HYPER_DEBUG || process.env.HYPERTERM_DEBUG || isDev

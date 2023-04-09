@@ -526,8 +526,6 @@ export default class Term extends React.PureComponent<TermProps> {
       >
         {this.props.url ? (
           <webview
-            nodeintegration
-            nodeintegrationinsubframes
             ref={this.setWebViewRef}
             src={this.props.url}
             style={{
