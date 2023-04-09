@@ -1,10 +1,11 @@
 import {
   app,
-  BrowserWindow,
+  /*BrowserWindow,*/
   shell,
   Menu,
   BrowserWindowConstructorOptions,
 } from "electron";
+import { BrowserWindow } from "electron-acrylic-window";
 import { isAbsolute, normalize, sep } from "path";
 import { URL, fileURLToPath } from "url";
 import { v4 as uuidv4 } from "uuid";
@@ -58,6 +59,8 @@ export function newWindow(
   const window = new BrowserWindow(
     app.plugins.getDecoratedBrowserOptions(winOpts)
   );
+
+  window.setVibrancy("light");
 
   // Enable remote module on this window
   remoteEnable(window.webContents);

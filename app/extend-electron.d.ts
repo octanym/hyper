@@ -1,16 +1,16 @@
-import type {Server} from './rpc';
+import type { Server } from "./rpc";
 
 declare global {
   namespace Electron {
     interface App {
-      config: typeof import('./config');
-      plugins: typeof import('./plugins');
+      config: typeof import("./config");
+      plugins: typeof import("./plugins");
       getWindows: () => Set<BrowserWindow>;
       getLastFocusedWindow: () => BrowserWindow | null;
       windowCallback?: (win: BrowserWindow) => void;
       createWindow: (
         fn?: (win: BrowserWindow) => void,
-        options?: {size?: [number, number]; position?: [number, number]}
+        options?: { size?: [number, number]; position?: [number, number] }
       ) => BrowserWindow;
       setVersion: (version: string) => void;
     }
